@@ -18,159 +18,78 @@ const CLIENTES = [
   "Codelco division PTMP",
   "Compañía Minera Zaldivar SPA",
   "SCM Minera Lumina Copper",
-  "SQM Salar SPA",
-  "Minera Ministro Hales",
-  "Minera Chuquicamata",
   "Minera Los Pelambres",
-  "Mantos Copper",
-  "Minera Mantos de Oro",
-  "Minera Mantos Verde",
+  "Codelco division Ministro Hales",
+  "Codelco division Chuquicamata",
 ];
 
 const SUPERVISORES = ["Bryan Mendoza", "Richard Williams", "Alexis Nuñez"];
 
-const T = (nombre) => ({ nombre, titulo: false });
-const H = (nombre) => ({ nombre, titulo: true });
+const clamp = (n) => Math.max(0, Math.min(100, Math.round(Number(n) || 0)));
 
-const TAREAS_DESARME = [
-  H("Desarme de Reductor"),
-  T("Lavado de equipos con hidrolavadora"),
-  T("Drenaje completo de lubricante"),
-  T("Run out y run face del equipo"),
-  T("Control de juegos axiales de llegada del equipo"),
-  T("Desmontaje de acoplamientos y accesorios"),
-  T("Desmontaje de tapas laterales"),
-  T("Retiro de pernos de unión base y tapa de housing"),
-  T("Retiro de tapa housing"),
-  T("Retiro de trenes de engranaje"),
-  T("Limpieza interior de housing y acoplamiento"),
-  T("Desarme de housing y torque de pernos de amarre según especificaciones"),
-  T("Retiro de rodamientos"),
-  T("Lavado de ejes, piñones, coronas y accesorios"),
-  H("Evaluación de Equipos"),
-  T("Control dimensional de alojamientos de housing"),
-  T("Control dimensional diámetros a ejes en zonas de rodamientos y alojamientos de acoples"),
-  T("Control visual a housing, ejes, piñones, coronas, acoplamientos y accesorios"),
-  T("END vía tintas penetrantes, housing, ejes, piñones, coronas y acoplamientos"),
-  T("END vía UT a ejes"),
-  T("Control de deflexión a ejes"),
-  T("Run out ejes"),
-  T("Concentricidad de la carcasa"),
-  T("Chequeo de preservación del equipo"),
-  T("Visita de Inspección ITO"),
-  T("Verificación de lo evaluado"),
-];
+const defaultActividad = () => ({
+  id: Date.now() + Math.random(),
+  fecha: new Date().toISOString().split("T")[0],
+  linea: "Ensamble",
+  nroLinea: "",
+  turno: "B",
+  ran: "",
+  unidad: "",
+  cliente: "",
+  clienteManual: "",
+  tecnicos: "",
+  supervisor: "",
+  supervisorManual: "",
+  planificacion: "",
+  planificacionManual: "",
+  avance: 0,
+  realizado: "",
+  pendiente: "",
+  observaciones: "",
+  notaTraspaso: "",
+  fotos: [],
+});
 
-const TAREAS_ENSAMBLE = [
-  H("Sub Ensamble"),
-  T("Granallado de carcasa de reductor"),
-  T("Mecanizados"),
-  T("Metalizados"),
-  T("Fabricaciones"),
-  T("Suministro de piezas"),
-  T("Componentes liberados"),
-  T("Chequeo y limpieza de piezas, componentes y servicios"),
-  T("Run out ejes"),
-  T("Posicionamiento de housing"),
-  T("Armado de cabezal"),
-  T("Montaje de rodamientos en ejes"),
-  T("Instalación de ejes sobre housing"),
-  T("Instalación de espaciadores"),
-  T("Aproximación de juegos axiales"),
-  H("Ensamble de Equipo"),
-  T("Instalación tapa superior en housing, torque de pernos de amarre de acuerdo a especificaciones"),
-  T("Montaje de tapas laterales y torque de pernos"),
-  T("Juegos axiales por árbol de engrane"),
-  T("Instalación de sellos HS - LS"),
-  T("Prueba de estanqueidas"),
-  T("Inspección final del proceso"),
-  T("Inspección de Armado ITO"),
-  T("Verificación de juegos axiales y backlash"),
-  T("Verificación instalacion de repuestos, ajustes, torques y procedimientos."),
-  T("Pruebas de funcionamiento"),
-  T("Traslado a banco de prueba y preparación para pruebas dinámicas en vacío"),
-  T("Pruebas dinámicas"),
-  T("Prueba de estanqueidas"),
-  T("Retiro de reductor banco de pruebas"),
-  T("Visita Pruebas Dinámicas ITO"),
-  T("Validación de pruebas dinámicas"),
-  H("Montaje de Accesorios"),
-  T("Preparación para montaje de accesorios, drenaje de aceite de pruebas, limpieza"),
-  T("Montaje de acoplamiento HS - LS"),
-  T("Montaje de accesorios (sist. Enfriamiento, protecciones, válvulas, respirador, etc)"),
-  T("Run out y run face del acople"),
-  T("Verificar puntos de sensores"),
-  H("Pintura y Embalaje"),
-  T("Limpieza completa a la superficie y eliminación de rastros de aceite"),
-  T("Verificación por boroscopia de limpieza de cañerias"),
-  T("Pintura del equipo"),
-  T("Embalaje con termocontraible"),
-  H("Liberación Sumitomo"),
-  T("Liberación final para despacho a cliente"),
-  T("Elaboración de Informe de reparación"),
-  T("Visita Liberación ITO"),
-  T("Liberación y despacho de equipo"),
-];
-
-const makeTareas = (linea) =>
-  (linea === "Desarme" ? TAREAS_DESARME : TAREAS_ENSAMBLE).map((item) => ({
-    id: Math.random(),
-    nombre: item.nombre,
-    titulo: item.titulo,
-    estado: "",
-    notaPendiente: "",
-  }));
-
-const calcAvance = (tareas) => {
-  const aplicables = tareas.filter((t) => !t.titulo && t.estado !== "noaplica");
-  if (!aplicables.length) return 0;
-  const finalizados = aplicables.filter((t) => t.estado === "finalizado").length;
-  return Math.round((finalizados / aplicables.length) * 100);
-};
-
-const defaultActividad = () => {
-  const linea = "Ensamble";
+// Convierte reportes de la versión anterior (con checklist de tareas) al
+// formato de texto libre, sin perder nada de lo ya registrado.
+const migrar = (a) => {
+  if (!a || typeof a !== "object") return defaultActividad();
+  const base = defaultActividad();
+  if (!Array.isArray(a.tareas)) {
+    return { ...base, ...a, avance: clamp(a.avance), fotos: a.fotos || [] };
+  }
+  const reales = a.tareas.filter((t) => !t.titulo);
+  const fin = reales.filter((t) => t.estado === "finalizado");
+  const pen = reales.filter((t) => t.estado === "pendiente");
+  const aplicables = reales.filter((t) => t.estado !== "noaplica");
+  const avanceCalc = aplicables.length ? Math.round((fin.length / aplicables.length) * 100) : 0;
+  const { tareas, ...resto } = a;
   return {
-    id: Date.now() + Math.random(),
-    fecha: new Date().toISOString().split("T")[0],
-    linea,
-    nroLinea: "",
-    turno: "B",
-    ran: "",
-    unidad: "",
-    cliente: "",
-    clienteManual: "",
-    tecnicos: "",
-    supervisor: "",
-    supervisorManual: "",
-    planificacion: "",
-    planificacionManual: "",
-    tareas: makeTareas(linea),
-    observaciones: "",
-    notaTraspaso: "",
-    fotos: [],
+    ...base,
+    ...resto,
+    avance: clamp(a.avance != null ? a.avance : avanceCalc),
+    realizado: a.realizado || fin.map((t) => "• " + t.nombre).join("\n"),
+    pendiente:
+      a.pendiente ||
+      pen.map((t) => "• " + t.nombre + (t.notaPendiente ? " — " + t.notaPendiente : "")).join("\n"),
+    fotos: a.fotos || [],
   };
 };
+
+const tienePendiente = (a) => !!(a.pendiente || "").trim();
 
 const STORAGE_KEY = "reporte_turno_data";
 
 export default function ReporteTurno() {
   const [step, setStep] = useState("form");
   const [actividadAbierta, setActividadAbierta] = useState(null);
-  const [seccionesColapsadas, setSeccionesColapsadas] = useState({});
   const [actividades, setActividades] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) return [defaultActividad()];
       const data = JSON.parse(saved);
-      // Migrar: si estado es "pendiente" y no tiene nota, resetear a ""
-      return data.map(a => ({
-        ...a,
-        tareas: a.tareas.map(t => ({
-          ...t,
-          estado: t.estado === "pendiente" && !t.notaPendiente ? "" : t.estado
-        }))
-      }));
+      if (!Array.isArray(data) || !data.length) return [defaultActividad()];
+      return data.map(migrar);
     } catch {
       return [defaultActividad()];
     }
@@ -180,9 +99,6 @@ export default function ReporteTurno() {
   const importRef = useRef();
 
   // ── Entrega de turno ──────────────────────────────────────────────────────
-  const [nombreSaliente, setNombreSaliente] = useState("");
-  const [nombreEntrante, setNombreEntrante] = useState("");
-  const [entregaHecha, setEntregaHecha] = useState(null);
   const [ranAbierto, setRanAbierto] = useState(null);
 
   // ── App instalable en el celular (PWA) ────────────────────────────────────
@@ -210,13 +126,18 @@ export default function ReporteTurno() {
     } catch {}
   }, [actividades]);
 
-  const toggleSeccion = (actId, secNombre) => {
-    const key = actId + ":" + secNombre;
-    setSeccionesColapsadas(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
   const addActividad = () => {
+    const ultima = actividades[actividades.length - 1];
     const nueva = defaultActividad();
+    // Se arrastra el encabezado común del turno para no reescribirlo cada vez.
+    if (ultima) {
+      nueva.fecha = ultima.fecha;
+      nueva.turno = ultima.turno;
+      nueva.supervisor = ultima.supervisor;
+      nueva.supervisorManual = ultima.supervisorManual;
+      nueva.planificacion = ultima.planificacion;
+      nueva.planificacionManual = ultima.planificacionManual;
+    }
     setActividades((p) => [...p, nueva]);
     setActividadAbierta(nueva.id);
   };
@@ -233,20 +154,6 @@ export default function ReporteTurno() {
   };
   const updateActividad = (id, field, value) =>
     setActividades((p) => p.map((a) => (a.id === id ? { ...a, [field]: value } : a)));
-
-  const cambiarLinea = (id, linea) =>
-    setActividades((p) =>
-      p.map((a) => (a.id === id ? { ...a, linea, tareas: makeTareas(linea) } : a))
-    );
-
-  const updateTarea = (actId, tareaId, campo, valor) =>
-    setActividades((p) =>
-      p.map((a) =>
-        a.id === actId
-          ? { ...a, tareas: a.tareas.map((t) => (t.id === tareaId ? { ...t, [campo]: valor } : t)) }
-          : a
-      )
-    );
 
   const comprimirImagen = (file, maxW = 1200, quality = 0.65) =>
     new Promise((resolve) => {
@@ -311,15 +218,13 @@ export default function ReporteTurno() {
       try {
         const datos = JSON.parse(ev.target.result);
         if (Array.isArray(datos)) {
-          setActividades(datos);
+          setActividades(datos.map(migrar));
           setStep("form");
           alert("✅ Reporte cargado correctamente");
         } else if (datos?.tipo === "entrega-turno" && Array.isArray(datos.actividades)) {
-          setActividades(datos.actividades);
-          setNombreSaliente(datos.entrega || "");
-              setStep("form");
-          const de = datos.entrega ? ` de ${datos.entrega}` : "";
-          alert(`✅ Entrega de turno${de} cargada.\n\nRevisa los pendientes y firma la recepción en "Entrega de turno".`);
+          setActividades(datos.actividades.map(migrar));
+          setStep("form");
+          alert("✅ Reporte cargado correctamente");
         } else {
           alert("❌ Archivo inválido");
         }
@@ -331,62 +236,23 @@ export default function ReporteTurno() {
     e.target.value = "";
   };
 
-  // ── Compartir la entrega (WhatsApp, correo, etc.) ────────────────────────
-  // En vez de un servidor, la entrega viaja como archivo por donde el
-  // equipo ya se comunica. El turno entrante lo abre con el botón 📂.
-  const compartirEntrega = async () => {
-    const datos = actividades.map((a) => ({ ...a, fotos: [] }));
-    const paquete = {
-      tipo: "entrega-turno",
-      generado: new Date().toISOString(),
-      entrega: nombreSaliente || null,
-      recibe: nombreEntrante || null,
-      actividades: datos,
-    };
-    const fecha = new Date().toLocaleDateString("es-CL").replace(/\//g, "-");
-    const nombreArchivo = `entrega-turno-${fecha}.json`;
-    const blob = new Blob([JSON.stringify(paquete, null, 2)], { type: "application/json" });
-    const file = new File([blob], nombreArchivo, { type: "application/json" });
-
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: "Entrega de turno" });
-        return;
-      } catch {
-        return; // el usuario canceló
-      }
-    }
-    // Si el celular no permite compartir archivos, se descarga igual.
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = nombreArchivo;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   // ── PDF: ACTA DE ENTREGA DE TURNO ─────────────────────────────────────────
   const handleExportPDF = () => {
     const esc = (t) => String(t ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+    const nl = (t) => esc(t).replace(/\n/g, "<br/>");
 
-    const datos = actividades.map((a, i) => {
-      const avance = calcAvance(a.tareas);
-      const reales = a.tareas.filter((t) => !t.titulo);
-      return {
-        i,
-        a,
-        avance,
-        cliente: a.cliente === "__manual__" ? a.clienteManual : a.cliente,
-        supervisor: a.supervisor === "__manual__" ? a.supervisorManual : a.supervisor,
-        planificacion: a.planificacion === "__manual__" ? a.planificacionManual : a.planificacion,
-        pend: reales.filter((t) => t.estado === "pendiente"),
-        fin: reales.filter((t) => t.estado === "finalizado"),
-        na: reales.filter((t) => t.estado === "noaplica"),
-        sin: reales.filter((t) => !t.estado),
-      };
-    });
+    const datos = actividades.map((a, i) => ({
+      i,
+      a,
+      avance: clamp(a.avance),
+      cliente: a.cliente === "__manual__" ? a.clienteManual : a.cliente,
+      supervisor: a.supervisor === "__manual__" ? a.supervisorManual : a.supervisor,
+      planificacion: a.planificacion === "__manual__" ? a.planificacionManual : a.planificacion,
+      realizado: (a.realizado || "").trim(),
+      pendiente: (a.pendiente || "").trim(),
+    }));
 
-    const totalPend = datos.reduce((n, d) => n + d.pend.length, 0);
+    const equiposConPend = datos.filter((d) => d.pendiente).length;
     const avgAvance = datos.length ? Math.round(datos.reduce((n, d) => n + d.avance, 0) / datos.length) : 0;
     const p0 = datos[0]?.a || {};
     const fechaTurno = p0.fecha
@@ -397,7 +263,7 @@ export default function ReporteTurno() {
 
     // Código de verificación: se deriva del contenido del acta. Si algún dato
     // cambia después de emitido, el código ya no corresponde.
-    const huella = JSON.stringify(datos.map((d) => [d.a.ran, d.avance, d.pend.map((t) => t.nombre + t.notaPendiente), d.a.notaTraspaso]));
+    const huella = JSON.stringify(datos.map((d) => [d.a.ran, d.avance, d.realizado, d.pendiente, d.a.notaTraspaso]));
     let h1 = 0x811c9dc5, h2 = 0x01000193;
     for (let k = 0; k < huella.length; k++) {
       h1 = (h1 ^ huella.charCodeAt(k)) >>> 0;
@@ -429,8 +295,8 @@ export default function ReporteTurno() {
         <td style="padding:5px 7px;border-bottom:1px solid #E8EBEE;font-size:9px;color:#4B5560;">${esc(d.cliente || "—")}</td>
         <td style="padding:5px 7px;border-bottom:1px solid #E8EBEE;width:90px;">${barra(d.avance)}</td>
         <td style="padding:5px 7px;border-bottom:1px solid #E8EBEE;text-align:center;">
-          ${d.pend.length
-            ? `<span style="background:#FDF0DC;color:#8A5A1E;font-weight:800;font-size:10px;border-radius:9px;padding:1px 7px;">${d.pend.length}</span>`
+          ${d.pendiente
+            ? `<span style="background:#FDF0DC;color:#8A5A1E;font-weight:800;font-size:10px;border-radius:9px;padding:1px 7px;">SÍ</span>`
             : `<span style="color:#1B7A4B;font-weight:800;font-size:10px;">✓</span>`}
         </td>
       </tr>`).join("");
@@ -464,8 +330,8 @@ export default function ReporteTurno() {
               <div style="font-size:8px;font-weight:700;color:#64748B;letter-spacing:0.06em;">EQUIPOS EN TURNO</div>
             </div>
             <div style="flex:1;border:1.5px solid #E0A245;background:#FFF8ED;border-radius:5px;padding:8px 10px;text-align:center;">
-              <div style="font-size:20px;font-weight:800;color:#8A5A1E;">${totalPend}</div>
-              <div style="font-size:8px;font-weight:800;color:#8A5A1E;letter-spacing:0.06em;">TAREAS PENDIENTES</div>
+              <div style="font-size:20px;font-weight:800;color:#8A5A1E;">${equiposConPend}</div>
+              <div style="font-size:8px;font-weight:800;color:#8A5A1E;letter-spacing:0.06em;">EQUIPOS CON PENDIENTES</div>
             </div>
             <div style="flex:1;border:1px solid #E2E8F0;border-radius:5px;padding:8px 10px;text-align:center;">
               <div style="font-size:20px;font-weight:800;color:#141A21;">${avgAvance}%</div>
@@ -488,14 +354,14 @@ export default function ReporteTurno() {
         <div style="border-top:1.5px solid #141A21;padding:11px 16px;background:#F8FAFC;">
           <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:16px;align-items:end;">
             <div>
-              <div style="font-size:7.5px;font-weight:800;color:#64748B;letter-spacing:0.08em;">EMITIDO POR</div>
-              <div style="font-size:11px;font-weight:700;color:#141A21;">${esc(nombreSaliente) || "—"}</div>
-              <div style="font-size:8px;color:#64748B;">Planificación y Control de Producción · SMAN Antofagasta</div>
+              <div style="font-size:7.5px;font-weight:800;color:#64748B;letter-spacing:0.08em;">SUPERVISOR DE TURNO</div>
+              <div style="font-size:11px;font-weight:700;color:#141A21;">${esc(datos[0]?.supervisor) || "—"}</div>
+              <div style="font-size:8px;color:#64748B;">Turno ${esc(p0.turno || "—")} · SMAN Antofagasta</div>
             </div>
             <div>
-              <div style="font-size:7.5px;font-weight:800;color:#64748B;letter-spacing:0.08em;">DIRIGIDO A</div>
-              <div style="font-size:11px;font-weight:700;color:#141A21;">${esc(nombreEntrante) || "—"}</div>
-              <div style="font-size:8px;color:#64748B;">Turno entrante</div>
+              <div style="font-size:7.5px;font-weight:800;color:#64748B;letter-spacing:0.08em;">PLANIFICACIÓN Y CONTROL</div>
+              <div style="font-size:11px;font-weight:700;color:#141A21;">${esc(datos[0]?.planificacion) || "—"}</div>
+              <div style="font-size:8px;color:#64748B;">Planificación y Control de Producción</div>
             </div>
             <div style="text-align:right;">
               <div style="font-size:7.5px;font-weight:800;color:#64748B;letter-spacing:0.08em;">CÓDIGO DE VERIFICACIÓN</div>
@@ -510,47 +376,38 @@ export default function ReporteTurno() {
       </div>`;
 
     // ── HOJA 2: PENDIENTES CONSOLIDADOS ──────────────────────────────────────
-    const conPend = datos.filter((d) => d.pend.length || d.a.notaTraspaso);
+    const conPend = datos.filter((d) => d.pendiente || d.a.notaTraspaso);
     const hojaPendientes = `
       <div style="break-before:page;page-break-before:always;">
         <div style="background:#141A21;padding:9px 14px;border-radius:5px 5px 0 0;display:flex;justify-content:space-between;align-items:center;">
           <div style="color:#fff;font-size:13px;font-weight:800;">PENDIENTES PARA EL TURNO ENTRANTE</div>
-          <div style="color:#E0A245;font-size:11px;font-weight:800;">${totalPend} tarea${totalPend !== 1 ? "s" : ""}</div>
+          <div style="color:#E0A245;font-size:11px;font-weight:800;">${equiposConPend} equipo${equiposConPend !== 1 ? "s" : ""}</div>
         </div>
         <div style="border:1px solid #E2E8F0;border-top:none;border-radius:0 0 5px 5px;padding:10px 14px;">
         ${conPend.length === 0
-          ? `<div style="font-size:11px;color:#1B7A4B;font-weight:700;padding:8px 0;">Sin tareas pendientes. Todos los equipos quedan al día.</div>`
+          ? `<div style="font-size:11px;color:#1B7A4B;font-weight:700;padding:8px 0;">Sin pendientes registrados. Todos los equipos quedan al día.</div>`
           : conPend.map((d) => `
             <div style="margin-bottom:11px;break-inside:avoid;">
               <div style="display:flex;align-items:center;gap:6px;border-bottom:1.5px solid #141A21;padding-bottom:3px;margin-bottom:5px;">
                 <span style="font-size:8px;font-weight:800;color:#fff;background:${d.a.linea === "Ensamble" ? "#2F6E8F" : "#A15A32"};border-radius:3px;padding:1px 5px;">${d.a.linea === "Ensamble" ? "ENS" : "DES"}</span>
                 <span style="font-family:monospace;font-size:12px;font-weight:800;">RAN ${esc(d.a.ran || "—")}</span>
                 <span style="font-size:10px;color:#4B5560;">${esc(d.a.unidad || "")}</span>
-                <span style="margin-left:auto;font-size:9px;font-weight:800;color:#8A5A1E;">${d.pend.length} pend. · ${d.avance}%</span>
+                <span style="margin-left:auto;font-size:9px;font-weight:800;color:#8A5A1E;">${d.avance}% avance</span>
               </div>
-              ${d.pend.map((t) => `
-                <div style="background:#FFF8ED;border-left:3px solid #E0A245;padding:4px 8px;margin-bottom:3px;">
-                  <div style="font-size:10.5px;color:#141A21;font-weight:600;">${esc(t.nombre)}</div>
-                  ${t.notaPendiente ? `<div style="font-size:9.5px;color:#8A5A1E;font-style:italic;">${esc(t.notaPendiente)}</div>` : ""}
-                </div>`).join("")}
+              ${d.pendiente ? `
+                <div style="background:#FFF8ED;border-left:3px solid #E0A245;padding:5px 8px;margin-bottom:3px;">
+                  <div style="font-size:10.5px;color:#141A21;line-height:1.45;">${nl(d.pendiente)}</div>
+                </div>` : ""}
               ${d.a.notaTraspaso ? `
                 <div style="background:#F1F5F9;border-left:3px solid #141A21;padding:5px 8px;margin-top:4px;">
                   <div style="font-size:7.5px;font-weight:800;color:#64748B;letter-spacing:0.07em;">INSTRUCCIÓN</div>
-                  <div style="font-size:10px;color:#141A21;font-weight:600;">${esc(d.a.notaTraspaso)}</div>
+                  <div style="font-size:10px;color:#141A21;font-weight:600;line-height:1.45;">${nl(d.a.notaTraspaso)}</div>
                 </div>` : ""}
             </div>`).join("")}
         </div>
       </div>`;
 
     // ── HOJAS 3+: DETALLE POR EQUIPO ─────────────────────────────────────────
-    const compacto = (lista, titulo, color) => lista.length ? `
-      <div style="margin-top:7px;">
-        <div style="font-size:7.5px;font-weight:800;color:${color};letter-spacing:0.07em;margin-bottom:2px;">${titulo} (${lista.length})</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 9px;">
-          ${lista.map((t) => `<div style="font-size:8px;color:#6B7580;line-height:1.35;">· ${esc(t.nombre)}</div>`).join("")}
-        </div>
-      </div>` : "";
-
     const hojasDetalle = datos.map((d) => `
       <div style="break-before:page;page-break-before:always;">
         <div style="background:#141A21;padding:9px 14px;border-radius:5px 5px 0 0;display:flex;justify-content:space-between;align-items:center;">
@@ -572,33 +429,30 @@ export default function ReporteTurno() {
               </div>`).join("")}
           </div>
 
-          ${d.pend.length ? `
+          <div style="border:1.5px solid #1B7A4B;background:#F4FBF7;border-radius:5px;padding:7px 9px;margin-bottom:7px;">
+            <div style="font-size:8.5px;font-weight:800;color:#1B7A4B;letter-spacing:0.07em;margin-bottom:4px;">TRABAJO REALIZADO EN EL TURNO</div>
+            <div style="font-size:10.5px;color:#141A21;line-height:1.5;">${d.realizado ? nl(d.realizado) : "<span style='color:#94A3B8;'>Sin registro.</span>"}</div>
+          </div>
+
+          ${d.pendiente ? `
             <div style="border:1.5px solid #E0A245;background:#FFF8ED;border-radius:5px;padding:7px 9px;">
-              <div style="font-size:8.5px;font-weight:800;color:#8A5A1E;letter-spacing:0.07em;margin-bottom:4px;">⚠ PENDIENTE — ${d.pend.length} TAREA${d.pend.length !== 1 ? "S" : ""}</div>
-              ${d.pend.map((t) => `
-                <div style="padding:2px 0;border-bottom:1px solid #F0DCC0;">
-                  <span style="font-size:10.5px;font-weight:600;color:#141A21;">${esc(t.nombre)}</span>
-                  ${t.notaPendiente ? `<span style="font-size:9.5px;color:#8A5A1E;font-style:italic;"> — ${esc(t.notaPendiente)}</span>` : ""}
-                </div>`).join("")}
+              <div style="font-size:8.5px;font-weight:800;color:#8A5A1E;letter-spacing:0.07em;margin-bottom:4px;">⚠ PENDIENTE PARA EL PRÓXIMO TURNO</div>
+              <div style="font-size:10.5px;color:#141A21;line-height:1.5;">${nl(d.pendiente)}</div>
             </div>` : `
             <div style="border:1px solid #1B7A4B;background:#DCF2E5;border-radius:5px;padding:6px 9px;font-size:10px;font-weight:700;color:#1B7A4B;">
-              ✓ Sin tareas pendientes en este equipo
+              ✓ Sin pendientes en este equipo
             </div>`}
 
           ${d.a.notaTraspaso ? `
             <div style="background:#F1F5F9;border-left:3px solid #141A21;padding:5px 9px;margin-top:6px;">
               <div style="font-size:7.5px;font-weight:800;color:#64748B;letter-spacing:0.07em;">INSTRUCCIÓN PARA EL TURNO ENTRANTE</div>
-              <div style="font-size:10px;color:#141A21;font-weight:600;">${esc(d.a.notaTraspaso)}</div>
+              <div style="font-size:10px;color:#141A21;font-weight:600;line-height:1.45;">${nl(d.a.notaTraspaso)}</div>
             </div>` : ""}
 
           ${d.a.observaciones ? `
-            <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:5px;padding:5px 9px;margin-top:6px;font-size:9.5px;color:#4B5560;">
-              <strong style="font-size:7.5px;color:#64748B;">OBSERVACIONES</strong><br/>${esc(d.a.observaciones)}
+            <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:5px;padding:5px 9px;margin-top:6px;font-size:9.5px;color:#4B5560;line-height:1.45;">
+              <strong style="font-size:7.5px;color:#64748B;">OBSERVACIONES</strong><br/>${nl(d.a.observaciones)}
             </div>` : ""}
-
-          ${compacto(d.fin, "EJECUTADO Y CONFORME", "#1B7A4B")}
-          ${compacto(d.sin, "NO INICIADO", "#8A5A1E")}
-          ${compacto(d.na, "NO APLICA", "#94A3B8")}
 
           ${d.a.fotos?.length ? `
             <div style="margin-top:8px;">
@@ -630,7 +484,6 @@ export default function ReporteTurno() {
     window.open(URL.createObjectURL(blob), "_blank");
   };
 
-
   // ── PREVIEW ────────────────────────────────────────────────────────────────
   if (step === "preview") {
     return (
@@ -658,7 +511,7 @@ export default function ReporteTurno() {
           </button>
 
           {actividades.map((a, i) => {
-            const avance = calcAvance(a.tareas);
+            const avance = clamp(a.avance);
             const fecha = new Date(a.fecha + "T12:00:00").toLocaleDateString("es-CL", {
               weekday: "long", year: "numeric", month: "long", day: "numeric",
             });
@@ -691,26 +544,19 @@ export default function ReporteTurno() {
                     </div>
                     <span style={S.avancePct}>{avance}%</span>
                   </div>
-                  <div style={S.previewLabel}>TAREAS</div>
-                  {a.tareas.map((t) => (
-                    t.titulo ? (
-                      <div key={t.id} style={S.tareaHeader}>{t.nombre}</div>
-                    ) : (
-                    <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", borderBottom: "1px solid #F1F5F9" }}>
-                      <span style={{
-                        fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 20, flexShrink: 0, marginTop: 1,
-                        background: t.estado === "finalizado" ? "#DCF2E5" : t.estado === "noaplica" ? "#F1F5F9" : "#FDF0DC",
-                        color: t.estado === "finalizado" ? "#1B7A4B" : t.estado === "noaplica" ? "#94A3B8" : "#8A5A1E",
-                      }}>
-                        {t.estado === "finalizado" ? "✅" : t.estado === "noaplica" ? "N/A" : "⏳"}
-                      </span>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: 13, color: t.estado === "noaplica" ? "#94A3B8" : "#141A21" }}>{t.nombre}</span>
-                        {t.notaPendiente && <div style={{ fontSize: 12, color: "#8A5A1E", marginTop: 2 }}>{t.notaPendiente}</div>}
-                      </div>
-                    </div>
-                    )
-                  ))}
+
+                  <div style={S.previewLabel}>TRABAJO REALIZADO</div>
+                  <div style={S.cajaRealizadoPreview}>
+                    {(a.realizado || "").trim() || "Sin registro."}
+                  </div>
+
+                  <div style={{ ...S.previewLabel, marginTop: 12 }}>PENDIENTE</div>
+                  {tienePendiente(a) ? (
+                    <div style={S.cajaPendientePreview}>{a.pendiente}</div>
+                  ) : (
+                    <div style={S.cajaSinPendiente}>✓ Sin pendientes en este equipo</div>
+                  )}
+
                   {a.observaciones && <div style={{ ...S.obsBox, marginTop: 12 }}>📝 {a.observaciones}</div>}
                   {a.fotos?.length > 0 && (
                     <div style={S.fotoPreviewGrid}>
@@ -732,19 +578,14 @@ export default function ReporteTurno() {
 
   // ── ENTREGA DE TURNO ───────────────────────────────────────────────────────
   if (step === "entrega") {
-    // Cada actividad = un RAN. La entrega se arma POR RAN, no en una lista general.
-    const resumen = actividades.map((a, i) => {
-      const avance = calcAvance(a.tareas);
-      const pend = a.tareas.filter((t) => !t.titulo && t.estado === "pendiente");
-      return {
-        idx: i,
-        act: a,
-        avance,
-        pend,
-        cliente: a.cliente === "__manual__" ? a.clienteManual : a.cliente,
-      };
-    });
-    const totalPendientes = resumen.reduce((n, r) => n + r.pend.length, 0);
+    const resumen = actividades.map((a, i) => ({
+      idx: i,
+      act: a,
+      avance: clamp(a.avance),
+      pend: tienePendiente(a),
+      cliente: a.cliente === "__manual__" ? a.clienteManual : a.cliente,
+    }));
+    const equiposConPend = resumen.filter((r) => r.pend).length;
     const avancePromedio = resumen.length
       ? Math.round(resumen.reduce((n, r) => n + r.avance, 0) / resumen.length)
       : 0;
@@ -758,7 +599,7 @@ export default function ReporteTurno() {
               <div>
                 <div style={S.topBarTitle}>Entrega de Turno</div>
                 <div style={S.topBarSub}>
-                  {resumen.length} RAN · {totalPendientes} pendiente{totalPendientes !== 1 ? "s" : ""} · {avancePromedio}% avance
+                  {resumen.length} RAN · {equiposConPend} con pendientes · {avancePromedio}% avance
                 </div>
               </div>
             </div>
@@ -769,7 +610,7 @@ export default function ReporteTurno() {
             <button style={{ ...S.shareBtn, flex: 1 }} onClick={() => setStep("preview")}>Ver detalle completo</button>
           </div>
 
-          {/* ── TABLA RESUMEN: los 10 RAN de un vistazo ── */}
+          {/* ── TABLA RESUMEN ── */}
           <div style={S.section}>
             <div style={S.sectionLabel}>EQUIPOS EN ESTE TURNO</div>
             <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto auto", gap: "0", fontSize: 12 }}>
@@ -780,23 +621,14 @@ export default function ReporteTurno() {
               {resumen.map((r) => (
                 <React.Fragment key={r.act.id}>
                   <div style={S.tdEntrega}>
-                    <span className="mono" style={{ fontWeight: 700 }}>{r.act.ran || "—"}</span>
+                    <span style={{ fontWeight: 700, fontFamily: "monospace" }}>{r.act.ran || "—"}</span>
                   </div>
-                  <div style={S.tdEntrega}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: r.act.linea === "Ensamble" ? "#2F6E8F" : "#A15A32", borderRadius: 3, padding: "1px 5px", marginRight: 5 }}>
-                      {r.act.linea === "Ensamble" ? "ENS" : "DES"}
-                    </span>
-                    {r.act.unidad || "—"}
-                  </div>
-                  <div style={{ ...S.tdEntrega, textAlign: "center", fontWeight: 800, color: r.avance === 100 ? "#1B7A4B" : r.avance >= 60 ? "#C9822E" : "#B3261E" }}>
-                    {r.avance}%
-                  </div>
+                  <div style={S.tdEntrega}>{r.act.unidad || "—"}</div>
+                  <div style={{ ...S.tdEntrega, textAlign: "center", fontWeight: 700 }}>{r.avance}%</div>
                   <div style={{ ...S.tdEntrega, textAlign: "center" }}>
-                    {r.pend.length > 0 ? (
-                      <span style={{ background: "#FDF0DC", color: "#8A5A1E", fontWeight: 800, borderRadius: 10, padding: "1px 7px" }}>{r.pend.length}</span>
-                    ) : (
-                      <span style={{ color: "#1B7A4B", fontWeight: 700 }}>✓</span>
-                    )}
+                    {r.pend
+                      ? <span style={{ color: "#8A5A1E", fontWeight: 800 }}>SÍ</span>
+                      : <span style={{ color: "#1B7A4B", fontWeight: 800 }}>✓</span>}
                   </div>
                 </React.Fragment>
               ))}
@@ -819,7 +651,7 @@ export default function ReporteTurno() {
                     {r.act.linea === "Ensamble" ? "ENS" : "DES"}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="mono" style={{ fontSize: 13, fontWeight: 700, color: "#141A21" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#141A21", fontFamily: "monospace" }}>
                       RAN {r.act.ran || "sin N°"}
                     </div>
                     <div style={{ fontSize: 11, color: "#64748B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -827,8 +659,8 @@ export default function ReporteTurno() {
                     </div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    {r.pend.length > 0 ? (
-                      <div style={{ fontSize: 11, fontWeight: 800, color: "#8A5A1E" }}>{r.pend.length} pend.</div>
+                    {r.pend ? (
+                      <div style={{ fontSize: 11, fontWeight: 800, color: "#8A5A1E" }}>con pendiente</div>
                     ) : (
                       <div style={{ fontSize: 11, fontWeight: 800, color: "#1B7A4B" }}>✓ al día</div>
                     )}
@@ -839,27 +671,23 @@ export default function ReporteTurno() {
 
                 {abierto && (
                   <div style={{ padding: "10px 12px", borderTop: "1px solid #E2E8F0" }}>
-                    {r.pend.length === 0 ? (
-                      <div style={{ fontSize: 12, color: "#1B7A4B", fontWeight: 600, marginBottom: 10 }}>
-                        Sin tareas pendientes en este equipo.
-                      </div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#1B7A4B", marginBottom: 5, letterSpacing: "0.05em" }}>
+                      TRABAJO REALIZADO
+                    </div>
+                    <div style={S.cajaRealizadoPreview}>
+                      {(r.act.realizado || "").trim() || "Sin registro."}
+                    </div>
+
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#8A5A1E", margin: "10px 0 5px", letterSpacing: "0.05em" }}>
+                      PENDIENTE EN ESTE RAN
+                    </div>
+                    {r.pend ? (
+                      <div style={S.cajaPendientePreview}>{r.act.pendiente}</div>
                     ) : (
-                      <>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "#8A5A1E", marginBottom: 6, letterSpacing: "0.05em" }}>
-                          PENDIENTE EN ESTE RAN
-                        </div>
-                        {r.pend.map((t) => (
-                          <div key={t.id} style={{ background: "#FFF8ED", border: "1px solid #E0A245", borderRadius: 6, padding: "6px 9px", marginBottom: 5 }}>
-                            <div style={{ fontSize: 12, color: "#141A21" }}>{t.nombre}</div>
-                            {t.notaPendiente && (
-                              <div style={{ fontSize: 11, color: "#8A5A1E", fontStyle: "italic", marginTop: 2 }}>— {t.notaPendiente}</div>
-                            )}
-                          </div>
-                        ))}
-                      </>
+                      <div style={S.cajaSinPendiente}>✓ Sin pendientes en este equipo</div>
                     )}
 
-                    <label style={{ ...S.label, marginTop: 8 }}>Instrucción para el turno entrante</label>
+                    <label style={{ ...S.label, marginTop: 10 }}>Instrucción para el turno entrante</label>
                     <textarea
                       style={{ ...S.textarea, minHeight: 56, fontSize: 13 }}
                       placeholder="Qué debe hacer el próximo turno con este equipo..."
@@ -872,52 +700,16 @@ export default function ReporteTurno() {
             );
           })}
 
-          {/* ── EMISIÓN ── */}
-          <div style={{ ...S.section, marginTop: 16 }}>
-            <div style={S.sectionLabel}>EMISIÓN DEL ACTA</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <div>
-                <label style={S.label}>Emitido por</label>
-                <input style={S.input} placeholder="Nombre de quien emite"
-                  value={nombreSaliente} onChange={(e) => setNombreSaliente(e.target.value)} />
-              </div>
-              <div>
-                <label style={S.label}>Dirigido a</label>
-                <input style={S.input} placeholder="Supervisor / turno entrante"
-                  value={nombreEntrante} onChange={(e) => setNombreEntrante(e.target.value)} />
-              </div>
-            </div>
-            <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 8, lineHeight: 1.5 }}>
-              Estos datos y el código de verificación quedan impresos al pie del acta.
-            </div>
-          </div>
-
-          {entregaHecha && (
-            <div style={{ background: "#DCF2E5", border: "1px solid #1B7A4B", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#1B7A4B", fontWeight: 600, marginBottom: 12, textAlign: "center" }}>
-              ✓ Entrega registrada — {entregaHecha}
-            </div>
-          )}
-
-          <button
-            style={{ ...S.btnPrimary, background: "#C9822E", marginBottom: 10 }}
-            onClick={() => {
-              setEntregaHecha(new Date().toLocaleString("es-CL"));
-              compartirEntrega();
-            }}
-          >
-            📤 Enviar entrega al turno entrante
-          </button>
-          <button style={{ ...S.shareBtn, width: "100%" }} onClick={handleExportPDF}>
+          <button style={{ ...S.btnPrimary, marginTop: 8 }} onClick={handleExportPDF}>
             📄 Exportar PDF del acta
           </button>
           <div style={{ fontSize: 11, color: "#94A3B8", textAlign: "center", marginTop: 10, lineHeight: 1.5 }}>
-            El archivo se envía por WhatsApp o correo. Quien recibe lo abre con el botón 📂 de la pantalla principal.
+            Se abre el acta lista para imprimir. En el cuadro de impresión elige "Guardar como PDF" para adjuntarla al correo.
           </div>
         </div>
       </div>
     );
   }
-
 
   // ── FORM ───────────────────────────────────────────────────────────────────
   return (
@@ -945,7 +737,7 @@ export default function ReporteTurno() {
         </div>
 
         {actividades.map((a, i) => {
-          const avance = calcAvance(a.tareas);
+          const avance = clamp(a.avance);
           const abierta = actividadAbierta === a.id;
           const clienteLabel = a.cliente === "__manual__" ? a.clienteManual : a.cliente;
           const nroLinea = a.nroLinea ? ` N°${a.nroLinea}` : "";
@@ -967,6 +759,7 @@ export default function ReporteTurno() {
                       <span style={{ fontSize:10, fontWeight:700, color:"#fff", background:lineaColor, borderRadius:4, padding:"1px 6px", flexShrink:0 }}>{a.linea}{nroLinea}</span>
                       {a.ran && <span style={{ fontSize:12, fontWeight:700, color:"#141A21" }}>RAN {a.ran}</span>}
                       {a.unidad && <span style={{ fontSize:11, color:"#64748B" }}>· {a.unidad}</span>}
+                      {tienePendiente(a) && <span style={{ fontSize:9, fontWeight:800, color:"#8A5A1E", background:"#FDF0DC", borderRadius:4, padding:"1px 5px" }}>PEND.</span>}
                     </div>
                     {clienteLabel && <div style={{ fontSize:10, color:"#94A3B8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{clienteLabel}</div>}
                   </div>
@@ -995,7 +788,7 @@ export default function ReporteTurno() {
                   <label style={S.label}>Línea</label>
                   <div style={{ display:"flex", gap:4, flex:1 }}>
                     {LINEAS.map(l => (
-                      <button key={l} onClick={() => cambiarLinea(a.id,l)} style={{
+                      <button key={l} onClick={() => updateActividad(a.id,"linea",l)} style={{
                         flex:1, border:"1.5px solid", borderRadius:7, fontSize:11, fontWeight:700, cursor:"pointer",
                         background: a.linea===l?(l==="Ensamble"?"#2F6E8F":"#A15A32"):"#F8FAFC",
                         color: a.linea===l?"#fff":"#64748B",
@@ -1088,82 +881,43 @@ export default function ReporteTurno() {
 
               <div style={S.divider} />
 
-              {/* TAREAS */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div style={S.sectionLabel}>ACTIVIDADES DEL TURNO</div>
-                <div style={{
-                  fontSize: 14, fontWeight: 800,
-                  color: avance === 100 ? "#1B7A4B" : avance >= 60 ? "#C9822E" : "#64748B"
-                }}>
-                  {avance}%
-                </div>
+              {/* ── AVANCE ── */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                <div style={{ ...S.sectionLabel, marginBottom:0 }}>AVANCE DEL EQUIPO</div>
+                <div style={{ fontSize:16, fontWeight:800, color:avanceColor }}>{avance}%</div>
+              </div>
+              <input type="range" min="0" max="100" step="5" value={avance}
+                onChange={e => updateActividad(a.id,"avance",clamp(e.target.value))}
+                style={{ width:"100%", accentColor:avanceColor, marginBottom:6 }} />
+              <div style={{ display:"flex", gap:4, marginBottom:14 }}>
+                {[0,25,50,75,100].map(v => (
+                  <button key={v} onClick={()=>updateActividad(a.id,"avance",v)} style={{
+                    flex:1, padding:"5px 0", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer",
+                    border:"1.5px solid", background: avance===v?"#141A21":"#F8FAFC",
+                    color: avance===v?"#fff":"#64748B", borderColor: avance===v?"#141A21":"#E2E8F0",
+                  }}>{v}%</button>
+                ))}
               </div>
 
-              <div style={{ background: "#E2E8F0", borderRadius: 99, height: 8, overflow: "hidden", marginBottom: 14 }}>
-                <div style={{
-                  height: "100%", borderRadius: 99, transition: "width 0.3s",
-                  width: `${avance}%`,
-                  background: avance === 100 ? "#1B7A4B" : avance >= 60 ? "#C9822E" : "#B3261E"
-                }} />
+              {/* ── TRABAJO REALIZADO ── */}
+              <div style={S.fieldGroup}>
+                <label style={{ ...S.label, color:"#1B7A4B", fontWeight:700 }}>✅ Trabajo realizado en el turno</label>
+                <textarea
+                  style={S.textareaRealizado}
+                  placeholder={"Describe lo ejecutado en el turno. Ejemplo:\n• Retiro de tapa de housing\n• Desmontaje de trenes de engranaje\n• Lavado de ejes y piñones"}
+                  value={a.realizado}
+                  onChange={e => updateActividad(a.id,"realizado",e.target.value)} />
               </div>
 
-              {(() => {
-                let seccionActual = null;
-                return a.tareas.map((t) => {
-                  if (t.titulo) {
-                    seccionActual = t.nombre;
-                    const key = a.id + ":" + t.nombre;
-                    const colapsada = seccionesColapsadas[key];
-                    return (
-                      <div key={t.id}
-                        onClick={() => toggleSeccion(a.id, t.nombre)}
-                        style={{ ...S.tareaHeader, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                        <span>{t.nombre}</span>
-                        <span style={{ fontSize:10 }}>{colapsada ? "▶" : "▼"}</span>
-                      </div>
-                    );
-                  }
-                  const key = a.id + ":" + seccionActual;
-                  if (seccionesColapsadas[key]) return null;
-                  return (
-                <div key={t.id} style={{ padding:"4px 0", borderBottom:"1px solid #F1F5F9" }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <span style={{ flex:1, fontSize:12, color:"#141A21", lineHeight:1.3 }}>{t.nombre}</span>
-                    <div style={{ display:"flex", gap:3, flexShrink:0 }}>
-                      {[
-                        { val:"finalizado", label:"✓",   colorOn:"#1B7A4B", bgOn:"#DCF2E5" },
-                        { val:"noaplica",   label:"N/A", colorOn:"#94A3B8", bgOn:"#F1F5F9" },
-                        { val:"pendiente",  label:"⏳",  colorOn:"#C9822E", bgOn:"#FDF0DC" },
-                      ].map(op => (
-                        <button key={op.val}
-                          style={{
-                            padding:"3px 7px", borderRadius:5, border:"1.5px solid",
-                            fontSize:10, fontWeight:700, cursor:"pointer",
-                            background: t.estado===op.val?op.bgOn:"#F8FAFC",
-                            color: t.estado===op.val?op.colorOn:"#CBD5E1",
-                            borderColor: t.estado===op.val?op.colorOn:"#E2E8F0",
-                          }}
-                          onClick={() => {
-                          const nuevoEstado = t.estado === op.val ? "" : op.val;
-                          updateTarea(a.id,t.id,"estado",nuevoEstado);
-                          if (nuevoEstado !== "pendiente") updateTarea(a.id,t.id,"notaPendiente","");
-                        }}>
-                          {op.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {t.estado === "pendiente" && (
-                    <input
-                      style={{ width:"100%", marginTop:4, padding:"5px 8px", border:"1px solid #E0A245", borderRadius:5, fontSize:11, color:"#8A5A1E", background:"#FFF8ED", boxSizing:"border-box", outline:"none" }}
-                      placeholder="Detalle del pendiente..."
-                      value={t.notaPendiente}
-                      onChange={e => updateTarea(a.id,t.id,"notaPendiente",e.target.value)} />
-                  )}
-                </div>
-                );
-                });
-              })()}
+              {/* ── PENDIENTE ── */}
+              <div style={S.fieldGroup}>
+                <label style={{ ...S.label, color:"#8A5A1E", fontWeight:700 }}>⏳ Pendiente para el próximo turno</label>
+                <textarea
+                  style={S.textareaPendiente}
+                  placeholder={"Qué quedó sin terminar y por qué. Ejemplo:\n• Falta montaje de rodamientos — a la espera de repuesto\n• Pruebas dinámicas — banco ocupado"}
+                  value={a.pendiente}
+                  onChange={e => updateActividad(a.id,"pendiente",e.target.value)} />
+              </div>
 
               <div style={S.divider} />
 
@@ -1227,16 +981,13 @@ const S = {
   section: { background: "#fff", borderRadius: 12, padding: "20px 18px", marginBottom: 16, border: "1px solid #E2E8F0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" },
   sectionLabel: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "#64748B", marginBottom: 12 },
   divider: { height: 1, background: "#E2E8F0", margin: "16px 0 18px" },
-  row2: { display: "flex", gap: 12 },
   fieldGroup: { flex: 1, marginBottom: 14 },
   label: { display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 5 },
   input: { width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: 8, fontSize: 14, color: "#141A21", background: "#F8FAFC", boxSizing: "border-box", outline: "none" },
   textarea: { width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: 8, fontSize: 14, color: "#141A21", background: "#F8FAFC", boxSizing: "border-box", minHeight: 72, resize: "vertical", outline: "none", fontFamily: "inherit" },
+  textareaRealizado: { width: "100%", padding: "10px 12px", border: "1.5px solid #1B7A4B", borderRadius: 8, fontSize: 14, color: "#141A21", background: "#F4FBF7", boxSizing: "border-box", minHeight: 130, resize: "vertical", outline: "none", fontFamily: "inherit", lineHeight: 1.5 },
+  textareaPendiente: { width: "100%", padding: "10px 12px", border: "1.5px solid #E0A245", borderRadius: 8, fontSize: 14, color: "#141A21", background: "#FFF8ED", boxSizing: "border-box", minHeight: 110, resize: "vertical", outline: "none", fontFamily: "inherit", lineHeight: 1.5 },
   select: { width: "100%", padding: "9px 12px", border: "1.5px solid #E2E8F0", borderRadius: 8, fontSize: 14, color: "#141A21", background: "#F8FAFC", boxSizing: "border-box" },
-  actCardNum: { background: "#141A21", color: "#fff", borderRadius: 6, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 },
-  removeBtn: { background: "none", border: "1px solid #FCA5A5", color: "#B3261E", fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "4px 10px", borderRadius: 6 },
-  tareaItem: { marginBottom: 6, padding: "8px 10px", background: "#FAFAFA", borderRadius: 8, border: "1px solid #F1F5F9" },
-  tareaHeader: { fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", color: "#141A21", background: "#E2E8F0", padding: "6px 10px", borderRadius: 6, marginBottom: 6, marginTop: 10, textTransform: "uppercase" },
   addBtn: { width: "100%", padding: "13px", border: "2px dashed #CBD5E1", borderRadius: 10, background: "none", color: "#475569", fontSize: 14, fontWeight: 600, cursor: "pointer", marginBottom: 12 },
   btnPrimary: { width: "100%", padding: "14px", background: "#141A21", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", letterSpacing: "-0.2px" },
   shareBar: { display: "flex", gap: 8, margin: "16px 0 20px" },
@@ -1250,7 +1001,10 @@ const S = {
   metaChip: { borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 600 },
   previewLabel: { fontSize: 11, fontWeight: 700, color: "#64748B", marginBottom: 6, letterSpacing: "0.04em" },
   avancePct: { fontSize: 13, fontWeight: 700, color: "#141A21", minWidth: 38, textAlign: "right" },
-  obsBox: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#475569" },
+  cajaRealizadoPreview: { background: "#F4FBF7", border: "1px solid #1B7A4B", borderRadius: 8, padding: "9px 12px", fontSize: 13, color: "#141A21", whiteSpace: "pre-wrap", lineHeight: 1.5 },
+  cajaPendientePreview: { background: "#FFF8ED", border: "1px solid #E0A245", borderRadius: 8, padding: "9px 12px", fontSize: 13, color: "#141A21", whiteSpace: "pre-wrap", lineHeight: 1.5 },
+  cajaSinPendiente: { background: "#DCF2E5", border: "1px solid #1B7A4B", borderRadius: 8, padding: "9px 12px", fontSize: 13, color: "#1B7A4B", fontWeight: 600 },
+  obsBox: { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#475569", whiteSpace: "pre-wrap" },
   fotoPreviewGrid: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 },
   fotoPreviewWrap: { width: 90, height: 90 },
   fotoPreviewImg: { width: 90, height: 90, objectFit: "cover", borderRadius: 8, border: "1px solid #E2E8F0" },
