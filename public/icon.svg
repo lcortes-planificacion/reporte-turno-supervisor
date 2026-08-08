@@ -1,19 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <rect width="512" height="512" fill="#141A21"/>
-  <g transform="translate(256,256)">
-    <g fill="#E0A245">
-      <circle r="115"/>
-      <g>
-        <rect x="-22" y="-166" width="44" height="60" rx="6"/>
-        <rect x="-22" y="-166" width="44" height="60" rx="6" transform="rotate(45)"/>
-        <rect x="-22" y="-166" width="44" height="60" rx="6" transform="rotate(90)"/>
-        <rect x="-22" y="-166" width="44" height="60" rx="6" transform="rotate(135)"/>
-        <rect x="-22" y="-166" width="44" height="60" rx="6" transform="rotate(180)"/>
-        <rect x="-22" y="-166" width="44" height="60" rx="6" transform="rotate(225)"/>
-        <rect x="-22" y="-166" width="44" height="60" rx="6" transform="rotate(270)"/>
-        <rect x="-22" y="-166" width="44" height="60" rx="6" transform="rotate(315)"/>
-      </g>
-    </g>
-    <circle r="48" fill="#141A21"/>
+
+  <!-- Tablilla de reporte -->
+  <g>
+    <!-- cuerpo de la hoja -->
+    <rect x="146" y="130" width="220" height="268" rx="20" fill="#F1F5F9"/>
+    <!-- pinza superior -->
+    <rect x="212" y="106" width="88" height="46" rx="14" fill="#E0A245"/>
+    <rect x="228" y="94" width="56" height="30" rx="12" fill="#E0A245"/>
+
+    <!-- líneas del reporte -->
+    <rect x="176" y="196" width="118" height="16" rx="8" fill="#141A21"/>
+    <rect x="176" y="232" width="160" height="14" rx="7" fill="#CBD5E1"/>
+    <rect x="176" y="266" width="160" height="14" rx="7" fill="#CBD5E1"/>
+
+    <!-- barra de avance -->
+    <rect x="176" y="308" width="160" height="18" rx="9" fill="#E2E8F0"/>
+    <rect x="176" y="308" width="104" height="18" rx="9" fill="#E0A245"/>
+
+    <!-- check de turno conforme -->
+    <path d="M180 356 l22 24 l44 -52" fill="none" stroke="#1B7A4B" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>
