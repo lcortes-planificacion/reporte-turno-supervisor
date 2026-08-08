@@ -375,39 +375,7 @@ export default function ReporteTurno() {
         </div>
       </div>`;
 
-    // ── HOJA 2: PENDIENTES CONSOLIDADOS ──────────────────────────────────────
-    const conPend = datos.filter((d) => d.pendiente || d.a.notaTraspaso);
-    const hojaPendientes = `
-      <div style="break-before:page;page-break-before:always;">
-        <div style="background:#141A21;padding:9px 14px;border-radius:5px 5px 0 0;display:flex;justify-content:space-between;align-items:center;">
-          <div style="color:#fff;font-size:13px;font-weight:800;">PENDIENTES PARA EL TURNO ENTRANTE</div>
-          <div style="color:#E0A245;font-size:11px;font-weight:800;">${equiposConPend} equipo${equiposConPend !== 1 ? "s" : ""}</div>
-        </div>
-        <div style="border:1px solid #E2E8F0;border-top:none;border-radius:0 0 5px 5px;padding:10px 14px;">
-        ${conPend.length === 0
-          ? `<div style="font-size:11px;color:#1B7A4B;font-weight:700;padding:8px 0;">Sin pendientes registrados. Todos los equipos quedan al día.</div>`
-          : conPend.map((d) => `
-            <div style="margin-bottom:11px;break-inside:avoid;">
-              <div style="display:flex;align-items:center;gap:6px;border-bottom:1.5px solid #141A21;padding-bottom:3px;margin-bottom:5px;">
-                <span style="font-size:8px;font-weight:800;color:#fff;background:${d.a.linea === "Ensamble" ? "#2F6E8F" : "#A15A32"};border-radius:3px;padding:1px 5px;">${d.a.linea === "Ensamble" ? "ENS" : "DES"}</span>
-                <span style="font-family:monospace;font-size:12px;font-weight:800;">RAN ${esc(d.a.ran || "—")}</span>
-                <span style="font-size:10px;color:#4B5560;">${esc(d.a.unidad || "")}</span>
-                <span style="margin-left:auto;font-size:9px;font-weight:800;color:#8A5A1E;">${d.avance}% avance</span>
-              </div>
-              ${d.pendiente ? `
-                <div style="background:#FFF8ED;border-left:3px solid #E0A245;padding:5px 8px;margin-bottom:3px;">
-                  <div style="font-size:10.5px;color:#141A21;line-height:1.45;">${nl(d.pendiente)}</div>
-                </div>` : ""}
-              ${d.a.notaTraspaso ? `
-                <div style="background:#F1F5F9;border-left:3px solid #141A21;padding:5px 8px;margin-top:4px;">
-                  <div style="font-size:7.5px;font-weight:800;color:#64748B;letter-spacing:0.07em;">INSTRUCCIÓN</div>
-                  <div style="font-size:10px;color:#141A21;font-weight:600;line-height:1.45;">${nl(d.a.notaTraspaso)}</div>
-                </div>` : ""}
-            </div>`).join("")}
-        </div>
-      </div>`;
-
-    // ── HOJAS 3+: DETALLE POR EQUIPO ─────────────────────────────────────────
+    // ── HOJAS 2+: DETALLE POR EQUIPO ─────────────────────────────────────────
     const hojasDetalle = datos.map((d) => `
       <div style="break-before:page;page-break-before:always;">
         <div style="background:#141A21;padding:9px 14px;border-radius:5px 5px 0 0;display:flex;justify-content:space-between;align-items:center;">
@@ -475,7 +443,6 @@ export default function ReporteTurno() {
 </style></head>
 <body>
   ${acta}
-  ${hojaPendientes}
   ${hojasDetalle}
   <script>window.onload=()=>{window.print();}<\/script>
 </body></html>`;
