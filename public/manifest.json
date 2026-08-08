@@ -1,7 +1,7 @@
 {
-  "name": "Reporte de Turno — SM Cyclo",
-  "short_name": "Reporte Turno",
-  "description": "Informe diario de actividades y entrega de turno",
+  "name": "Reporte de Turno B — Supervisor",
+  "short_name": "Reporte Turno B",
+  "description": "Avance del turno por equipo: trabajo realizado, pendientes y evidencia fotográfica",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
